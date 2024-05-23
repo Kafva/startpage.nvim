@@ -16,14 +16,17 @@ local function version_string()
            (jit and " (jit)" or "")
 end
 
-local function exit_startpage()
+local function delete_mappings()
+    for _,key in pairs(mapped_keys) do
+        vim.keymap.del('n', key, { buffer = vim.g.startpage_buf })
+    end
+    vim.g.startpage_buf = nil
+end
+
+local function close_startpage()
     if vim.g.startpage_buf == nil or
        not vim.api.nvim_buf_is_valid(vim.g.startpage_buf) then
         return
-    end
-
-    for _,key in pairs(mapped_keys) do
-        vim.keymap.del('n', key, { buffer = vim.g.startpage_buf })
     end
 
     vim.api.nvim_buf_delete(vim.g.startpage_buf, {})
@@ -35,7 +38,7 @@ local function setup_mappings()
     vim.keymap.set("n", "e", function ()
         vim.bo.modifiable = true
         vim.api.nvim_buf_set_lines(0, 0, -1, false, {''})
-        exit_startpage()
+        delete_mappings()
 
     end, { buffer = vim.g.startpage_buf })
 
@@ -44,7 +47,7 @@ local function setup_mappings()
         vim.bo.modifiable = true
         vim.api.nvim_buf_set_lines(0, 0, -1, false, {''})
         vim.cmd "startinsert"
-        exit_startpage()
+        delete_mappings()
 
     end, { buffer = vim.g.startpage_buf })
 
@@ -86,7 +89,31 @@ end
 ---@param lines table<string>
 ---@return table<string>
 local function center_align(lines)
-    return lines
+    local centered_lines = {}
+    local win = vim.api.nvim_get_current_win()
+    local width = vim.api.nvim_win_get_width(win)
+    local height = vim.api.nvim_win_get_height(win)
+
+    local top_offset = height/2 - 10
+    local bottom_height = height - top_offset - #lines
+
+    -- Top spacing
+    for _ = 1,top_offset do
+        table.insert(centered_lines, "")
+    end
+
+    for _,line in pairs(lines) do
+        local space_cnt = math.floor((width - vim.api.nvim_strwidth(line)) / 2)
+        local spaces = string.rep(" ", space_cnt)
+        table.insert(centered_lines, spaces .. line)
+    end
+
+    -- Bottom spacing
+    for _ = 1,bottom_height do
+        table.insert(centered_lines, "")
+    end
+
+    return centered_lines
 end
 
 function M.setup()
@@ -105,7 +132,7 @@ function M.setup()
         pattern = {},
         callback = function ()
             if vim.g.startpage_buf ~= vim.api.nvim_get_current_buf() then
-                exit_startpage()
+                close_startpage()
             end
         end
     })
@@ -123,13 +150,11 @@ function M.setup()
 
             local lines = vim.tbl_flatten({
                 {
-                    "",
                     version_string(),
                     "",
                     "  Recent files"
                 },
                 mru_list(),
-                {""}
             })
 
             vim.api.nvim_buf_set_lines(0, 0, -1, false, center_align(lines))
