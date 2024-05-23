@@ -1,0 +1,8 @@
+{
+  "workspace.library": [
+      "/usr/share/nvim/runtime/lua/vim",
+      "/opt/nvim/share/nvim/runtime/lua/vim",
+      "/opt/homebrew/share/lua/5.4",
+      "/opt/homebrew/lib/lua/5.4"
+  ]
+}
