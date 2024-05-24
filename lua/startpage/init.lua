@@ -68,44 +68,79 @@ local function setup_mappings()
     end, { buffer = vim.g.startpage_buf })
 end
 
----Fetch a list of all recently opened files in the current directory
----@return table<string>
-local function mru_list()
-    local files = {}
-    local cwd = vim.fn.getcwd() .. "/"
-    for _,f in pairs(vim.v.oldfiles) do
-        if vim.fn.filereadable(f) == 1 and vim.startswith(f, cwd) then
-            local entry = f:sub(#cwd + 1)
+---@param line string
+---@param winwidth number
+---@return string
+local function get_center_spacing(line, winwidth)
+    local linewidth = vim.api.nvim_strwidth(line)
+    local leading_spacing = math.floor((winwidth - linewidth) / 2)
+    local spaces = string.rep(" ", leading_spacing)
+    return spaces
+end
 
-            -- Skip .git/COMMIT_EDITMSG
-            if not vim.startswith(entry, '.git') then
-                table.insert(files, entry)
-            end
+
+---@param spacing string
+---@param count number
+---@return table<string>
+local function mru_list(spacing, count)
+    local _, devicons = pcall(require, 'nvim-web-devicons')
+
+    local lines = {}
+    local cwd = vim.fn.getcwd() .. "/"
+
+    for i,f in pairs(vim.v.oldfiles) do
+        if i == count then
+            break
         end
+
+        -- Only list files that exist under the current cwd
+        if vim.fn.filereadable(f) ~= 1 or not vim.startswith(f, cwd) then
+            goto continue
+        end
+
+        local entry = f:sub(#cwd + 1)
+
+        -- Skip .git/COMMIT_EDITMSG
+        if vim.startswith(entry, '.git') then
+            goto continue
+        end
+
+        local filename = vim.fs.basename(entry)
+        local splits = vim.split(entry, '.', {plain = true, trimempty = true})
+        local ext = #splits >= 1 and splits[#splits] or ''
+        local icon
+        local hl_group
+
+        if devicons then
+            icon, hl_group = devicons.get_icon(filename, ext, {})
+        end
+        entry = (icon or '') .. " " .. entry
+
+        table.insert(lines, spacing .. entry)
+
+        ::continue::
     end
-    return files
+
+    if #lines > 1 then
+        table.insert(lines, 1, "")
+        table.insert(lines, 1, "  Recent files")
+    end
+
+    return lines
 end
 
 ---@param lines table<string>
 ---@return table<string>
-local function center_align(lines)
-    local centered_lines = {}
-    local width = vim.api.nvim_win_get_width(0)
+local function vertical_align(lines)
     local height = vim.api.nvim_win_get_height(0)
 
     local top_offset = math.floor((height - #lines)/2)
     local bottom_spacing = height - top_offset - #lines
+    local centered_lines = lines
 
     -- Top spacing
     for _ = 1,top_offset do
-        table.insert(centered_lines, "")
-    end
-
-    for _,line in pairs(lines) do
-        local linewidth = vim.api.nvim_strwidth(line)
-        local leading_spacing = math.floor((width - linewidth) / 2)
-        local spaces = string.rep(" ", leading_spacing)
-        table.insert(centered_lines, spaces .. line)
+        table.insert(centered_lines, 1, "")
     end
 
     -- Bottom spacing
@@ -148,16 +183,21 @@ function M.setup()
 
             setup_mappings()
 
+            -- Make the version string centered and align everything else
+            -- to fit with it.
+            local winwidth = vim.api.nvim_win_get_width(0)
+            local version = version_string()
+            local spacing = get_center_spacing(version, winwidth)
+
             local lines = vim.tbl_flatten({
-                {
-                    version_string(),
+                    spacing .. version,
                     "",
-                    "  Recent files"
-                },
-                mru_list(),
+                    mru_list(spacing, 7),
             })
 
-            vim.api.nvim_buf_set_lines(0, 0, -1, false, center_align(lines))
+            local aligned_lines = vertical_align(lines)
+
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, aligned_lines)
             vim.bo.modifiable = false
             vim.bo.modified = false
         end
