@@ -78,11 +78,17 @@ local function get_center_spacing(line, winwidth)
     return spaces
 end
 
+local function center_cursor()
+    local winheight = vim.api.nvim_win_get_height(0)
+    local winwidth = vim.api.nvim_win_get_width(0)
+    local linenr = math.floor(winheight  / 2)
+    vim.api.nvim_win_set_cursor(0, {linenr, math.floor(winwidth/2)})
+end
 
 ---@param spacing string
 ---@param count number
 ---@return table<string>
-local function mru_list(spacing, count)
+local function get_oldfiles(spacing, count)
     local _, devicons = pcall(require, 'nvim-web-devicons')
 
     local lines = {}
@@ -121,9 +127,9 @@ local function mru_list(spacing, count)
         ::continue::
     end
 
-    if #lines > 1 then
-        table.insert(lines, 1, "")
-        table.insert(lines, 1, "  Recent files")
+    if #lines >= 1 then
+        table.insert(lines, 1, spacing .. " ")
+        table.insert(lines, 1, spacing .. "  Recent files")
     end
 
     return lines
@@ -183,6 +189,9 @@ function M.setup()
 
             setup_mappings()
 
+            -- TODO
+            vim.g.startpage_ns_id = vim.api.nvim_create_namespace('startpage')
+
             -- Make the version string centered and align everything else
             -- to fit with it.
             local winwidth = vim.api.nvim_win_get_width(0)
@@ -191,8 +200,8 @@ function M.setup()
 
             local lines = vim.tbl_flatten({
                     spacing .. version,
-                    "",
-                    mru_list(spacing, 7),
+                    spacing .. " ",
+                    get_oldfiles(spacing, 7),
             })
 
             local aligned_lines = vertical_align(lines)
@@ -200,6 +209,7 @@ function M.setup()
             vim.api.nvim_buf_set_lines(0, 0, -1, false, aligned_lines)
             vim.bo.modifiable = false
             vim.bo.modified = false
+            center_cursor()
         end
     })
 end
