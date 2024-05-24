@@ -90,12 +90,11 @@ end
 ---@return table<string>
 local function center_align(lines)
     local centered_lines = {}
-    local win = vim.api.nvim_get_current_win()
-    local width = vim.api.nvim_win_get_width(win)
-    local height = vim.api.nvim_win_get_height(win)
+    local width = vim.api.nvim_win_get_width(0)
+    local height = vim.api.nvim_win_get_height(0)
 
-    local top_offset = height/2 - 10
-    local bottom_height = height - top_offset - #lines
+    local top_offset = math.floor((height - #lines)/2)
+    local bottom_spacing = height - top_offset - #lines
 
     -- Top spacing
     for _ = 1,top_offset do
@@ -103,13 +102,14 @@ local function center_align(lines)
     end
 
     for _,line in pairs(lines) do
-        local space_cnt = math.floor((width - vim.api.nvim_strwidth(line)) / 2)
-        local spaces = string.rep(" ", space_cnt)
+        local linewidth = vim.api.nvim_strwidth(line)
+        local leading_spacing = math.floor((width - linewidth) / 2)
+        local spaces = string.rep(" ", leading_spacing)
         table.insert(centered_lines, spaces .. line)
     end
 
     -- Bottom spacing
-    for _ = 1,bottom_height do
+    for _ = 1,bottom_spacing do
         table.insert(centered_lines, "")
     end
 
