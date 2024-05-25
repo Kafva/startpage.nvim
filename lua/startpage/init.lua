@@ -1,6 +1,6 @@
 local M = {}
 
-local mapped_keys = { 'e', 'i', 'q', '<CR>' }
+local mapped_keys = { 'e', 'i', 'p', 'P', 'q', '<CR>' }
 
 M.default_opts = {
     recent_files_header = "  Recent files",
@@ -141,6 +141,17 @@ local function init_mappings()
         vim.cmd "startinsert"
     end, { buffer = vim.g.startpage_buf })
 
+    -- Paste
+    vim.keymap.set("n", "p", function ()
+        clear_startpage()
+        vim.cmd "normal! p"
+    end, { buffer = vim.g.startpage_buf })
+
+    vim.keymap.set("n", "P", function ()
+        clear_startpage()
+        vim.cmd "normal! P"
+    end, { buffer = vim.g.startpage_buf })
+
     -- Quit
     vim.keymap.set("n", "q", function ()
         vim.cmd "qa!"
@@ -209,8 +220,8 @@ local function init_startpage()
         local linenr = top_offset + #header + (i-1)
         local col_start = #spacing
         local col_end = #spacing + 1
-        local location = oldfile.hl_group .. " " .. tostring(linenr) .. ":" .. tostring(col_start)
-        vim.notify("[startpage] " ..  location , vim.log.levels.debug)
+        -- local location = oldfile.hl_group .. " " .. tostring(linenr) .. ":" .. tostring(col_start)
+        -- vim.notify("[startpage] " ..  location , vim.log.levels.debug)
         vim.api.nvim_buf_add_highlight(vim.g.startpage_buf,
                                        vim.g.startpage_ns_id,
                                        oldfile.hl_group,
