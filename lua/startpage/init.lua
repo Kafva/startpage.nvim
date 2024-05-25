@@ -69,11 +69,7 @@ local function get_oldfiles(count)
     local out = {}
     local cwd = vim.fn.getcwd() .. "/"
 
-    for i,f in pairs(vim.v.oldfiles) do
-        if i == count then
-            break
-        end
-
+    for _,f in pairs(vim.v.oldfiles) do
         -- Only list files that exist under the current cwd
         if vim.fn.filereadable(f) ~= 1 or not vim.startswith(f, cwd) then
             goto continue
@@ -98,6 +94,10 @@ local function get_oldfiles(count)
 
         table.insert(out, { path = path, icon = icon, hl_group = hl_group })
 
+        if #out == count then
+            break
+        end
+
         ::continue::
     end
 
@@ -114,6 +114,13 @@ local function open_under_cursor()
     end
 
     vim.cmd("edit " .. filepath)
+end
+
+local function deinit_mappings()
+    for _,key in pairs(mapped_keys) do
+        vim.keymap.del('n', key, { buffer = vim.g.startpage_buf })
+    end
+    vim.g.startpage_buf = nil
 end
 
 -- Reset the startpage buffer to a regular empty buffer
@@ -143,13 +150,6 @@ local function init_mappings()
     vim.keymap.set("n", "<CR>", open_under_cursor, { buffer = vim.g.startpage_buf })
 end
 
-local function deinit_mappings()
-    for _,key in pairs(mapped_keys) do
-        vim.keymap.del('n', key, { buffer = vim.g.startpage_buf })
-    end
-    vim.g.startpage_buf = nil
-end
-
 -- Close the startpage buffer, keymaps and highlights are buffer local so
 -- they do not need to be cleared here.
 local function close_startpage()
@@ -162,7 +162,7 @@ local function close_startpage()
     vim.g.startpage_buf = nil
 end
 
-local function open_startpage()
+local function init_startpage()
     if vim.g.stdin_read or vim.fn.expand'%' ~= '' then
         return
     end
@@ -209,9 +209,11 @@ local function open_startpage()
         local linenr = top_offset + #header + (i-1)
         local col_start = #spacing
         local col_end = #spacing + 1
-        vim.api.nvim_buf_add_highlight(vim.g.startpage_buf, 
-                                       vim.g.startpage_ns_id, 
-                                       oldfile.hl_group, 
+        local location = oldfile.hl_group .. " " .. tostring(linenr) .. ":" .. tostring(col_start)
+        vim.notify("[startpage] " ..  location , vim.log.levels.debug)
+        vim.api.nvim_buf_add_highlight(vim.g.startpage_buf,
+                                       vim.g.startpage_ns_id,
+                                       oldfile.hl_group,
                                        linenr,
                                        col_start,
                                        col_end)
@@ -236,7 +238,6 @@ function M.setup(user_opts)
     vim.api.nvim_create_autocmd('StdinReadPre', {
         pattern = {},
         callback = function()
-            vim.g.startpage_buf = vim.api.nvim_get_current_buf()
             vim.g.stdin_read = true
         end,
     })
@@ -254,7 +255,7 @@ function M.setup(user_opts)
 
     vim.api.nvim_create_autocmd("UIEnter", {
         pattern = {},
-        callback = open_startpage
+        callback = init_startpage
     })
 end
 
