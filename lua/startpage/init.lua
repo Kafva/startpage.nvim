@@ -58,7 +58,10 @@ local function setup_mappings()
 
     -- Go to file
     vim.keymap.set("n", "<CR>", function ()
-        local filepath = vim.trim(vim.api.nvim_get_current_line())
+        local line = vim.api.nvim_get_current_line()
+        -- Trim away icon if present
+        local filepath = vim.trim(line:gsub('[^-_./@a-zA-Z0-9åäöÅÄÖ]', ''))
+
         if vim.fn.filereadable(filepath) ~= 1 then
             return
         end
@@ -85,13 +88,12 @@ local function center_cursor()
     vim.api.nvim_win_set_cursor(0, {linenr, math.floor(winwidth/2)})
 end
 
----@param spacing string
 ---@param count number
----@return table<string>
-local function get_oldfiles(spacing, count)
+---@return table
+local function get_oldfiles(count)
     local _, devicons = pcall(require, 'nvim-web-devicons')
 
-    local lines = {}
+    local out = {}
     local cwd = vim.fn.getcwd() .. "/"
 
     for i,f in pairs(vim.v.oldfiles) do
@@ -104,15 +106,15 @@ local function get_oldfiles(spacing, count)
             goto continue
         end
 
-        local entry = f:sub(#cwd + 1)
+        local path = f:sub(#cwd + 1)
 
         -- Skip .git/COMMIT_EDITMSG
-        if vim.startswith(entry, '.git') then
+        if vim.startswith(path, '.git') then
             goto continue
         end
 
-        local filename = vim.fs.basename(entry)
-        local splits = vim.split(entry, '.', {plain = true, trimempty = true})
+        local filename = vim.fs.basename(path)
+        local splits = vim.split(path, '.', {plain = true, trimempty = true})
         local ext = #splits >= 1 and splits[#splits] or ''
         local icon
         local hl_group
@@ -120,24 +122,19 @@ local function get_oldfiles(spacing, count)
         if devicons then
             icon, hl_group = devicons.get_icon(filename, ext, {})
         end
-        entry = (icon or '') .. " " .. entry
 
-        table.insert(lines, spacing .. entry)
+        table.insert(out, { path = path, icon = icon, hl_group = hl_group })
 
         ::continue::
     end
 
-    if #lines >= 1 then
-        table.insert(lines, 1, spacing .. " ")
-        table.insert(lines, 1, spacing .. "  Recent files")
-    end
-
-    return lines
+    return out
 end
 
 ---@param lines table<string>
----@return table<string>
-local function vertical_align(lines)
+---@param spacing string
+---@return table<string>,number
+local function vertical_align(lines, spacing)
     local height = vim.api.nvim_win_get_height(0)
 
     local top_offset = math.floor((height - #lines)/2)
@@ -146,15 +143,15 @@ local function vertical_align(lines)
 
     -- Top spacing
     for _ = 1,top_offset do
-        table.insert(centered_lines, 1, "")
+        table.insert(centered_lines, 1, spacing)
     end
 
     -- Bottom spacing
     for _ = 1,bottom_spacing do
-        table.insert(centered_lines, "")
+        table.insert(centered_lines, spacing)
     end
 
-    return centered_lines
+    return centered_lines, top_offset
 end
 
 function M.setup()
@@ -189,7 +186,6 @@ function M.setup()
 
             setup_mappings()
 
-            -- TODO
             vim.g.startpage_ns_id = vim.api.nvim_create_namespace('startpage')
 
             -- Make the version string centered and align everything else
@@ -198,15 +194,49 @@ function M.setup()
             local version = version_string()
             local spacing = get_center_spacing(version, winwidth)
 
-            local lines = vim.tbl_flatten({
+            local oldfiles = get_oldfiles(7)
+            local oldfiles_lines = {}
+            local header = {
                     spacing .. version,
                     spacing .. " ",
-                    get_oldfiles(spacing, 7),
-            })
+            }
 
-            local aligned_lines = vertical_align(lines)
+            if #oldfiles >= 1 then
+                table.insert(header, spacing .. "  Recent files")
+                table.insert(header, spacing .. " ")
+
+                for _,oldfile in pairs(oldfiles) do
+                    local icon = oldfile.icon or " "
+                    local line = spacing .. icon .. string.rep(' ', 2) .. oldfile.path
+                    table.insert(oldfiles_lines, line)
+                end
+            end
+
+            local content_lines = vim.tbl_flatten({ header, oldfiles_lines })
+
+            local aligned_lines, top_offset = vertical_align(content_lines, spacing .. " ")
 
             vim.api.nvim_buf_set_lines(0, 0, -1, false, aligned_lines)
+
+            -- Set highlighting for icons
+            for i,oldfile in ipairs(oldfiles) do
+                if oldfile.hl_group == nil then
+                    goto continue
+                end
+
+                local linenr = top_offset + #header + (i-1)
+                local col_start = #spacing
+                local col_end = #spacing + 1
+                vim.notify(vim.inspect(linenr))
+                vim.api.nvim_buf_add_highlight(vim.g.startpage_buf, 
+                                               vim.g.startpage_ns_id, 
+                                               oldfile.hl_group, 
+                                               linenr,
+                                               col_start,
+                                               col_end)
+                ::continue::
+            end
+
             vim.bo.modifiable = false
             vim.bo.modified = false
             center_cursor()
