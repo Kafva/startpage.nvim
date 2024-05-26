@@ -192,12 +192,12 @@ local function init_startpage()
     local header = {
             spacing .. version,
             spacing .. " ",
+            #oldfiles >= 1 and (spacing .. M.recent_files_header) or
+                               (spacing .. "No recent files"),
+            spacing .. " "
     }
 
     if #oldfiles >= 1 then
-        table.insert(header, spacing .. M.recent_files_header)
-        table.insert(header, spacing .. " ")
-
         for _,oldfile in pairs(oldfiles) do
             local icon = oldfile.icon or " "
             local line = spacing .. icon .. string.rep(' ', 2) .. oldfile.path
