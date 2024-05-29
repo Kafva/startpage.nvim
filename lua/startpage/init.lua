@@ -5,6 +5,7 @@ local mapped_keys = { 'e', 'i', 'p', 'P', 'q', '<CR>' }
 M.default_opts = {
     recent_files_header = "  Recent files",
     oldfiles_count = 7,
+    default_icon = '', -- Must be blankspace or a glyph
     log_level = vim.log.levels.TRACE
 }
 
@@ -90,7 +91,9 @@ local function get_oldfiles(count)
             icon, hl_group = devicons.get_icon(filename, ext, {})
         end
 
-        table.insert(out, { path = path, icon = icon, hl_group = hl_group })
+        table.insert(out, { path = path,
+                            icon = icon or M.default_icon,
+                            hl_group = hl_group })
 
         if #out == count then
             break
@@ -105,7 +108,7 @@ end
 local function open_under_cursor()
     local line = vim.api.nvim_get_current_line()
     -- Trim away icon if present
-    local filepath = vim.trim(line:gsub('[^-_./@a-zA-Z0-9åäöÅÄÖ]', ''))
+    local filepath = vim.trim(line:gsub('[^-_./@a-zA-Z0-9åäöÅÄÖ ]', ''))
 
     if vim.fn.filereadable(filepath) ~= 1 then
         return

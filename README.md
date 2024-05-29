@@ -12,6 +12,7 @@ The startpage provides shortcuts to `oldfiles` with icons loaded from
 require 'startpage'.setup{
     recent_files_header = "  Recent files",
     oldfiles_count = 7,
+    default_icon = '', -- Must be blankspace or a glyph
     log_level = vim.log.levels.TRACE
 }
 ```
