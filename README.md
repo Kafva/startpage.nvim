@@ -11,7 +11,8 @@ The startpage provides shortcuts to `oldfiles` with icons loaded from
 ```lua
 require 'startpage'.setup{
     recent_files_header = "  Recent files",
-    oldfiles_count = 7
+    oldfiles_count = 7,
+    log_level = vim.log.levels.TRACE
 }
 ```
 

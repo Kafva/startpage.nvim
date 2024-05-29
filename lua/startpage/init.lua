@@ -5,6 +5,7 @@ local mapped_keys = { 'e', 'i', 'p', 'P', 'q', '<CR>' }
 M.default_opts = {
     recent_files_header = "  Recent files",
     oldfiles_count = 7,
+    log_level = vim.log.levels.TRACE
 }
 
 ---@return string
@@ -22,27 +23,24 @@ local function version_string()
 end
 
 ---@param line string
----@param winwidth number
 ---@return string
-local function get_center_spacing(line, winwidth)
+local function get_center_spacing(line)
     local linewidth = vim.api.nvim_strwidth(line)
-    local leading_spacing = math.floor((winwidth - linewidth) / 2)
+    local leading_spacing = math.floor((vim.g.startpage_width - linewidth) / 2)
     local spaces = string.rep(" ", leading_spacing)
     return spaces
 end
 
 local function center_cursor()
-    local winheight = vim.api.nvim_win_get_height(0)
-    local winwidth = vim.api.nvim_win_get_width(0)
-    local linenr = math.floor(winheight  / 2)
-    vim.api.nvim_win_set_cursor(0, {linenr, math.floor(winwidth/2)})
+    local linenr = math.floor(vim.g.startpage_height / 2)
+    vim.api.nvim_win_set_cursor(0, {linenr, math.floor(vim.g.startpage_width / 2)})
 end
 
 ---@param lines table<string>
 ---@param spacing string
 ---@return table<string>,number
 local function vertical_align(lines, spacing)
-    local height = vim.api.nvim_win_get_height(0)
+    local height = vim.g.startpage_height
 
     local top_offset = math.floor((height - #lines)/2)
     local bottom_spacing = height - top_offset - #lines
@@ -165,27 +163,29 @@ end
 -- they do not need to be cleared here.
 local function close_startpage()
     if vim.g.startpage_buf == nil or
-       not vim.api.nvim_buf_is_valid(vim.g.startpage_buf) then
+       not vim.api.nvim_buf_is_valid(vim.g.startpage_buf) or
+       vim.g.startpage_win == nil or
+       not vim.api.nvim_win_is_valid(vim.g.startpage_win) then
         return
     end
 
     vim.api.nvim_buf_delete(vim.g.startpage_buf, {})
     vim.g.startpage_buf = nil
+    vim.g.startpage_win = nil
+    vim.g.startpage_width = nil
+    vim.g.startpage_height = nil
 end
 
-local function init_startpage()
-    if vim.g.stdin_read or vim.fn.expand'%' ~= '' then
-        return
-    end
+local function draw_startpage()
+    vim.bo.modifiable = true
 
-    vim.g.startpage_buf = vim.api.nvim_get_current_buf()
-    vim.g.startpage_ns_id = vim.api.nvim_create_namespace('startpage')
+    -- Clear everything if we are re-drawing
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
 
     -- Make the version string centered and align everything else
     -- to fit with it.
-    local winwidth = vim.api.nvim_win_get_width(0)
     local version = version_string()
-    local spacing = get_center_spacing(version, winwidth)
+    local spacing = get_center_spacing(version)
 
     local oldfiles = get_oldfiles(M.oldfiles_count)
     local oldfiles_lines = {}
@@ -220,8 +220,8 @@ local function init_startpage()
         local linenr = top_offset + #header + (i-1)
         local col_start = #spacing
         local col_end = #spacing + 1
-        -- local location = oldfile.hl_group .. " " .. tostring(linenr) .. ":" .. tostring(col_start)
-        -- vim.notify("[startpage] " ..  location , vim.log.levels.debug)
+        local location = oldfile.hl_group .. " " .. tostring(linenr) .. ":" .. tostring(col_start)
+        vim.notify("[startpage] " ..  location , M.log_level)
         vim.api.nvim_buf_add_highlight(vim.g.startpage_buf,
                                        vim.g.startpage_ns_id,
                                        oldfile.hl_group,
@@ -231,10 +231,32 @@ local function init_startpage()
         ::continue::
     end
 
+    -- Done
     vim.bo.modifiable = false
     vim.bo.modified = false
-    center_cursor()
-    init_mappings()
+end
+
+local function register_winresized_autocmd()
+    assert(vim.g.startpage_buf, "No startpage buffer set")
+    vim.api.nvim_create_autocmd('WinResized', {
+        buffer = vim.g.startpage_buf,
+        callback = function ()
+            local width = vim.api.nvim_win_get_width(vim.g.startpage_win)
+            local height = vim.api.nvim_win_get_height(vim.g.startpage_win)
+            if width == vim.g.startpage_width and height == vim.g.startpage_height then
+                return
+            end
+
+            local oldims = vim.g.startpage_width .. "x" .. vim.g.startpage_height
+            local newdims = width .. "x" .. height
+            vim.notify('[startpage] ' .. oldims .. " -> " .. newdims , M.log_level)
+
+            vim.g.startpage_width = width
+            vim.g.startpage_height = height
+            draw_startpage()
+            center_cursor()
+        end,
+    })
 end
 
 function M.setup(user_opts)
@@ -261,12 +283,28 @@ function M.setup(user_opts)
             if vim.g.startpage_buf ~= vim.api.nvim_get_current_buf() then
                 close_startpage()
             end
-        end
+        end,
     })
 
     vim.api.nvim_create_autocmd("UIEnter", {
         pattern = {},
-        callback = init_startpage
+        callback = function ()
+            if vim.g.stdin_read or vim.fn.expand'%' ~= '' then
+                return
+            end
+            vim.g.startpage_win = vim.api.nvim_get_current_win()
+            vim.g.startpage_buf = vim.api.nvim_get_current_buf()
+            vim.g.startpage_ns_id = vim.api.nvim_create_namespace('startpage')
+
+            vim.g.startpage_width = vim.api.nvim_win_get_width(vim.g.startpage_win)
+            vim.g.startpage_height = vim.api.nvim_win_get_height(vim.g.startpage_win)
+
+            register_winresized_autocmd()
+            draw_startpage()
+            center_cursor()
+
+            init_mappings()
+        end
     })
 end
 
