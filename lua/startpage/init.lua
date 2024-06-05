@@ -246,7 +246,8 @@ local function register_winresized_autocmd()
         callback = function ()
             local width = vim.api.nvim_win_get_width(vim.g.startpage_win)
             local height = vim.api.nvim_win_get_height(vim.g.startpage_win)
-            if width == vim.g.startpage_width and height == vim.g.startpage_height then
+            local unchanged_dims = width == vim.g.startpage_width and height == vim.g.startpage_height
+            if unchanged_dims or vim.bo.modified then
                 return
             end
 
