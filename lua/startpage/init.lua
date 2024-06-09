@@ -293,7 +293,9 @@ function M.setup(user_opts)
     vim.api.nvim_create_autocmd("UIEnter", {
         pattern = {},
         callback = function ()
-            if vim.g.stdin_read or vim.fn.expand'%' ~= '' then
+            if vim.g.stdin_read or
+               vim.fn.expand'%' ~= '' or
+               vim.o.ft == 'netrw' then
                 return
             end
             vim.g.startpage_win = vim.api.nvim_get_current_win()
