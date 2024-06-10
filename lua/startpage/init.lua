@@ -108,9 +108,10 @@ end
 local function open_under_cursor()
     local line = vim.api.nvim_get_current_line()
     -- Trim away icon if present
-    local filepath = vim.trim(line:gsub('[^-_./@a-zA-Z0-9åäöÅÄÖ ]', ''))
+    local filepath = vim.trim(line:gsub("[^\32-\126åöäÅÄÖ]", ''))
 
     if vim.fn.filereadable(filepath) ~= 1 then
+        vim.notify("[startpage] Not found: " .. filepath, M.log_level)
         return
     end
 
