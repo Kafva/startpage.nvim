@@ -34,7 +34,8 @@ end
 
 local function center_cursor()
     local linenr = math.floor(vim.g.startpage_height / 2)
-    vim.api.nvim_win_set_cursor(0, {linenr, math.floor(vim.g.startpage_width / 2)})
+    vim.api.nvim_win_set_cursor(vim.g.startpage_win,
+                                {linenr, math.floor(vim.g.startpage_width / 2)})
 end
 
 ---@param lines table<string>
@@ -127,9 +128,9 @@ end
 
 -- Reset the startpage buffer to a regular empty buffer
 local function clear_startpage()
-    vim.bo.modifiable = true
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, {''})
-    vim.api.nvim_buf_clear_namespace(0, vim.g.startpage_ns_id, 0, -1)
+    vim.api.nvim_set_option_value('modifiable', true, { buf = vim.g.startpage_buf })
+    vim.api.nvim_buf_set_lines(vim.g.startpage_buf, 0, -1, false, {''})
+    vim.api.nvim_buf_clear_namespace(vim.g.startpage_buf, vim.g.startpage_ns_id, 0, -1)
     deinit_mappings()
 end
 
@@ -181,10 +182,10 @@ local function close_startpage()
 end
 
 local function draw_startpage()
-    vim.bo.modifiable = true
+    vim.api.nvim_set_option_value('modifiable', true, { buf = vim.g.startpage_buf })
 
     -- Clear everything if we are re-drawing
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
+    vim.api.nvim_buf_set_lines(vim.g.startpage_buf, 0, -1, false, {})
 
     -- Make the version string centered and align everything else
     -- to fit with it.
@@ -213,7 +214,7 @@ local function draw_startpage()
 
     local aligned_lines, top_offset = vertical_align(content_lines, spacing .. " ")
 
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, aligned_lines)
+    vim.api.nvim_buf_set_lines(vim.g.startpage_buf, 0, -1, false, aligned_lines)
 
     -- Set highlighting for icons
     for i,oldfile in ipairs(oldfiles) do
@@ -236,8 +237,8 @@ local function draw_startpage()
     end
 
     -- Done
-    vim.bo.modifiable = false
-    vim.bo.modified = false
+    vim.api.nvim_set_option_value('modifiable', false, { buf = vim.g.startpage_buf })
+    vim.api.nvim_set_option_value('modified', false, { buf = vim.g.startpage_buf })
 end
 
 local function register_winresized_autocmd()
@@ -245,10 +246,12 @@ local function register_winresized_autocmd()
     vim.api.nvim_create_autocmd('WinResized', {
         buffer = vim.g.startpage_buf,
         callback = function ()
+            local modified = vim.api.nvim_get_option_value('modified',
+                                                   {buf = vim.g.startpage_buf})
             local width = vim.api.nvim_win_get_width(vim.g.startpage_win)
             local height = vim.api.nvim_win_get_height(vim.g.startpage_win)
             local unchanged_dims = width == vim.g.startpage_width and height == vim.g.startpage_height
-            if unchanged_dims or vim.bo.modified then
+            if unchanged_dims or modified then
                 return
             end
 
