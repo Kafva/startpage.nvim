@@ -12,14 +12,16 @@ M.default_opts = {
 ---@return string
 local function version_string()
     local version = vim.version()
-    return "Nvim-" ..
-           version.major .. "." ..
-           version.minor .. "." ..
-           version.patch ..
-           (type(version.build) == 'string' and
-             "-" .. version.build or
-             '') ..
-           " " .. _VERSION ..
+    local version_number = version.major .. "." ..
+                           version.minor .. "." ..
+                           version.patch
+
+    local version_build = (type(version.build) == "string" and
+                           version.build ~=  'v' .. version_number) and
+                           "-" .. version.build or
+                           ''
+    return "Nvim-" .. version_number .. version_build .. " " ..
+            _VERSION ..
            (jit and " (jit)" or "")
 end
 
