@@ -212,7 +212,7 @@ local function draw_startpage()
         end
     end
 
-    local content_lines = vim.tbl_flatten({ header, oldfiles_lines })
+    local content_lines = vim.iter({ header, oldfiles_lines }):flatten():totable()
 
     local aligned_lines, top_offset = vertical_align(content_lines, spacing .. " ")
 
