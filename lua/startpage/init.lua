@@ -151,33 +151,43 @@ end
 
 local function init_mappings()
     -- stylua: ignore start
-    -- Clear to an empty buffer
-    vim.keymap.set('n', 'e', clear_startpage, { buffer = vim.g.startpage_buf })
+    vim.keymap.set('n', 'e', clear_startpage, {
+        buffer = vim.g.startpage_buf,
+        desc = "Clear startpage into an empty buffer"
+    })
 
-    -- Start editing in an empty buffer
     vim.keymap.set('n', 'i', function ()
         clear_startpage()
         vim.cmd 'startinsert'
-    end, { buffer = vim.g.startpage_buf })
+    end, {
+        buffer = vim.g.startpage_buf,
+        desc = "Start editing in an empty buffer"
+    })
 
-    -- Paste
     vim.keymap.set('n', 'p', function ()
         clear_startpage()
         vim.cmd 'normal! p'
-    end, { buffer = vim.g.startpage_buf })
+    end, {
+        buffer = vim.g.startpage_buf,
+        desc = "Overwrite startpage with clipboard content"
+    })
 
     vim.keymap.set('n', 'P', function ()
         clear_startpage()
         vim.cmd 'normal! P'
-    end, { buffer = vim.g.startpage_buf })
+    end, {
+        buffer = vim.g.startpage_buf,
+        desc = "Overwrite startpage with clipboard content"
+    })
 
-    -- Quit
     vim.keymap.set('n', 'q', function ()
         vim.cmd 'qa!'
-    end, { buffer = vim.g.startpage_buf })
+    end, { buffer = vim.g.startpage_buf, desc = "Quit out of startpage" })
 
-    -- Go to file
-    vim.keymap.set('n', '<CR>', open_under_cursor, { buffer = vim.g.startpage_buf })
+    vim.keymap.set('n', '<CR>', open_under_cursor, {
+        buffer = vim.g.startpage_buf,
+        desc = "Go to file under cursor"
+    })
     -- stylua: ignore end
 end
 
