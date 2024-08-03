@@ -88,8 +88,8 @@ local function get_oldfiles(count)
 
         local path = f:sub(#cwd + 1)
 
-        -- Skip .git/COMMIT_EDITMSG
-        if vim.startswith(path, '.git') then
+        -- Skip **/.git/**
+        if path:find('.git/', 0, true) ~= nil then
             goto continue
         end
 
