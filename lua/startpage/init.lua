@@ -1,12 +1,13 @@
 local M = {}
 
-local mapped_keys = { 'e', 'i', 'p', 'P', 'q', '<CR>' }
-
 M.default_opts = {
     recent_files_header = '  Recent files',
     oldfiles_count = 7,
     default_icon = '', -- Must be blankspace or a glyph
     log_level = vim.log.levels.TRACE,
+    -- The keys in this table will cancel out of the startpage and be sent
+    -- as they would normally.
+    passed_keys = { 'i', 'o', 'p', 'P' },
 }
 
 ---@return string
@@ -133,6 +134,8 @@ local function open_under_cursor()
 end
 
 local function deinit_mappings()
+    local mapped_keys =
+        vim.iter({ 'e', 'q', '<CR>' }, M.passed_keys):flatten():totable()
     for _, key in pairs(mapped_keys) do
         vim.keymap.del('n', key, { buffer = vim.g.startpage_buf })
     end
@@ -151,33 +154,20 @@ end
 
 local function init_mappings()
     -- stylua: ignore start
+    for _,k in pairs(M.passed_keys) do
+        vim.keymap.set('n', k, function ()
+            clear_startpage()
+            if k == 'i' or k == 'o' then
+                vim.cmd('startinsert')
+            else
+                vim.cmd('normal! ' .. k)
+            end
+        end, { buffer = vim.g.startpage_buf })
+    end
+
     vim.keymap.set('n', 'e', clear_startpage, {
         buffer = vim.g.startpage_buf,
         desc = "Clear startpage into an empty buffer"
-    })
-
-    vim.keymap.set('n', 'i', function ()
-        clear_startpage()
-        vim.cmd 'startinsert'
-    end, {
-        buffer = vim.g.startpage_buf,
-        desc = "Start editing in an empty buffer"
-    })
-
-    vim.keymap.set('n', 'p', function ()
-        clear_startpage()
-        vim.cmd 'normal! p'
-    end, {
-        buffer = vim.g.startpage_buf,
-        desc = "Overwrite startpage with clipboard content"
-    })
-
-    vim.keymap.set('n', 'P', function ()
-        clear_startpage()
-        vim.cmd 'normal! P'
-    end, {
-        buffer = vim.g.startpage_buf,
-        desc = "Overwrite startpage with clipboard content"
     })
 
     vim.keymap.set('n', 'q', function ()
