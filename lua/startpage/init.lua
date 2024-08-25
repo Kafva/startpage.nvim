@@ -134,8 +134,7 @@ local function open_under_cursor()
 end
 
 local function deinit_mappings()
-    local mapped_keys =
-        vim.iter({ 'e', 'q', '<CR>' }, M.passed_keys):flatten():totable()
+    local mapped_keys = { 'e', 'q', '<CR>', unpack(M.passed_keys) }
     for _, key in pairs(mapped_keys) do
         vim.keymap.del('n', key, { buffer = vim.g.startpage_buf })
     end
