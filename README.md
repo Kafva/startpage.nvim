@@ -13,7 +13,6 @@ require 'startpage'.setup{
     recent_files_header = "  Recent files",
     oldfiles_count = 7,
     default_icon = '', -- Must be blankspace or a glyph
-    log_level = vim.log.levels.TRACE,
     -- The keys in this table will cancel out of the startpage and be sent
     -- as they would normally.
     passed_keys = { 'i', 'o', 'p', 'P' }

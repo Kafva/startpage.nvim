@@ -4,7 +4,6 @@ M.default_opts = {
     recent_files_header = '  Recent files',
     oldfiles_count = 7,
     default_icon = '', -- Must be blankspace or a glyph
-    log_level = vim.log.levels.TRACE,
     -- The keys in this table will cancel out of the startpage and be sent
     -- as they would normally.
     passed_keys = { 'i', 'o', 'p', 'P' },
@@ -126,7 +125,6 @@ local function open_under_cursor()
         vim.trim(line:gsub('[^\32-\126\196\197\214\228\229\246]', ''))
 
     if vim.fn.filereadable(filepath) ~= 1 then
-        vim.notify('[startpage] Not found: ' .. filepath, M.log_level)
         return
     end
 
@@ -249,12 +247,6 @@ local function draw_startpage()
         local linenr = top_offset + #header + (i - 1)
         local col_start = #spacing
         local col_end = #spacing + 1
-        local location = oldfile.hl_group
-            .. ' '
-            .. tostring(linenr)
-            .. ':'
-            .. tostring(col_start)
-        vim.notify('[startpage] ' .. location, M.log_level)
         vim.api.nvim_buf_add_highlight(
             vim.g.startpage_buf,
             vim.g.startpage_ns_id,
@@ -295,15 +287,6 @@ local function register_winresized_autocmd()
             if unchanged_dims or modified then
                 return
             end
-
-            local oldims = vim.g.startpage_width
-                .. 'x'
-                .. vim.g.startpage_height
-            local newdims = width .. 'x' .. height
-            vim.notify(
-                '[startpage] ' .. oldims .. ' -> ' .. newdims,
-                M.log_level
-            )
 
             vim.g.startpage_width = width
             vim.g.startpage_height = height
