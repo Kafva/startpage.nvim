@@ -328,14 +328,14 @@ function M.setup(user_opts)
         callback = function()
             if
                 vim.g.stdin_read
-                or vim.fn.expand '%' ~= ''
+                or vim.fn.expand('%') ~= ''
                 or vim.o.ft == 'netrw'
             then
                 return
             end
             vim.g.startpage_win = vim.api.nvim_get_current_win()
             vim.g.startpage_buf = vim.api.nvim_get_current_buf()
-            vim.g.startpage_ns_id = vim.api.nvim_create_namespace 'startpage'
+            vim.g.startpage_ns_id = vim.api.nvim_create_namespace('startpage')
 
             vim.g.startpage_width =
                 vim.api.nvim_win_get_width(vim.g.startpage_win)
