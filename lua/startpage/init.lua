@@ -247,13 +247,12 @@ local function draw_startpage()
         local linenr = top_offset + #header + (i - 1)
         local col_start = #spacing
         local col_end = #spacing + 1
-        vim.api.nvim_buf_add_highlight(
+        vim.hl.range(
             vim.g.startpage_buf,
             vim.g.startpage_ns_id,
             oldfile.hl_group,
-            linenr,
-            col_start,
-            col_end
+            {linenr, col_start},
+            {linenr, col_end}
         )
         ::continue::
     end
