@@ -42,6 +42,10 @@ local function get_center_spacing(line)
 end
 
 local function center_cursor()
+    if vim.g.startpage_width <= 2 or vim.g.startpage_height <= 2 then
+        return
+    end
+
     local linenr = math.floor(vim.g.startpage_height / 2)
     vim.api.nvim_win_set_cursor(
         vim.g.startpage_win,
@@ -197,6 +201,22 @@ local function close_startpage()
     vim.g.startpage_height = nil
 end
 
+---@param oldfiles table
+---@param spacing string
+local function get_oldfiles_lines(oldfiles, spacing)
+    local oldfiles_lines = {}
+
+    if #oldfiles >= 1 then
+        for _, oldfile in pairs(oldfiles) do
+            local icon = oldfile.icon or ' '
+            local line = spacing .. icon .. string.rep(' ', 2) .. oldfile.path
+            table.insert(oldfiles_lines, line)
+        end
+    end
+
+    return oldfiles_lines
+end
+
 local function draw_startpage()
     vim.api.nvim_set_option_value(
         'modifiable',
@@ -211,50 +231,50 @@ local function draw_startpage()
     -- to fit with it.
     local version = version_string()
     local spacing = get_center_spacing(version)
-
-    local oldfiles = get_oldfiles(M.oldfiles_count)
-    local oldfiles_lines = {}
     local header = {
         spacing .. version,
         spacing .. ' ',
-        #oldfiles >= 1 and (spacing .. M.recent_files_header)
-            or (spacing .. 'No recent files'),
-        spacing .. ' ',
     }
+    local lines = {}
+    local oldfiles = {}
+    local show_oldfiles = vim.g.startpage_width >= 20
+        and vim.g.startpage_height >= 10
 
-    if #oldfiles >= 1 then
-        for _, oldfile in pairs(oldfiles) do
-            local icon = oldfile.icon or ' '
-            local line = spacing .. icon .. string.rep(' ', 2) .. oldfile.path
-            table.insert(oldfiles_lines, line)
-        end
+    if show_oldfiles then
+        oldfiles = get_oldfiles(M.oldfiles_count)
+        local oldfiles_lines = get_oldfiles_lines(oldfiles, spacing)
+        local subheader = #oldfiles >= 1 and (spacing .. M.recent_files_header)
+            or (spacing .. 'No recent files')
+        table.insert(header, subheader)
+        table.insert(header, spacing .. ' ')
+        lines = vim.iter({ header, oldfiles_lines }):flatten():totable()
+    else
+        lines = header
     end
 
-    local content_lines =
-        vim.iter({ header, oldfiles_lines }):flatten():totable()
-
-    local aligned_lines, top_offset =
-        vertical_align(content_lines, spacing .. ' ')
+    local aligned_lines, top_offset = vertical_align(lines, spacing .. ' ')
 
     vim.api.nvim_buf_set_lines(vim.g.startpage_buf, 0, -1, false, aligned_lines)
 
-    -- Set highlighting for icons
-    for i, oldfile in ipairs(oldfiles) do
-        if oldfile.hl_group == nil then
-            goto continue
-        end
+    if show_oldfiles then
+        -- Set highlighting for icons
+        for i, oldfile in ipairs(oldfiles) do
+            if oldfile.hl_group == nil then
+                goto continue
+            end
 
-        local linenr = top_offset + #header + (i - 1)
-        local col_start = #spacing
-        local col_end = #spacing + 1
-        vim.hl.range(
-            vim.g.startpage_buf,
-            vim.g.startpage_ns_id,
-            oldfile.hl_group,
-            {linenr, col_start},
-            {linenr, col_end}
-        )
-        ::continue::
+            local linenr = top_offset + #header + (i - 1)
+            local col_start = #spacing
+            local col_end = #spacing + 1
+            vim.hl.range(
+                vim.g.startpage_buf,
+                vim.g.startpage_ns_id,
+                oldfile.hl_group,
+                { linenr, col_start },
+                { linenr, col_end }
+            )
+            ::continue::
+        end
     end
 
     -- Done
