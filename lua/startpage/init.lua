@@ -136,7 +136,9 @@ local function open_under_cursor()
 
     -- HACK: For some reason registering the `BufLeave` autocmd causes the buffer
     -- we open to lack filetype information, workaround to make it load.
-    vim.fn.bufload(vim.fn.bufadd(filepath))
+    local id = vim.fn.bufadd(filepath)
+    -- Catch potential 'Found a swap file...' errors
+    _ = pcall(vim.fn.bufload, id)
 
     vim.cmd('edit ' .. filepath)
 end
