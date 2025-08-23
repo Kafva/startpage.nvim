@@ -134,6 +134,10 @@ local function open_under_cursor()
         return
     end
 
+    -- HACK: For some reason registering the `BufLeave` autocmd causes the buffer
+    -- we open to lack filetype information, workaround to make it load.
+    vim.fn.bufload(vim.fn.bufadd(filepath))
+
     vim.cmd('edit ' .. filepath)
 end
 
@@ -315,12 +319,12 @@ function M.setup(user_opts)
     })
     table.insert(startpage_autocmd_ids, id)
 
-    -- Close the startpage as soon as we open a file, i.e. make it automatically
-    -- close when calling :Files etc.
-    id = vim.api.nvim_create_autocmd('BufRead', {
-        pattern = {},
+    -- Close the startpage as soon as we leave it, this is needed
+    -- to automatically close the page with e.g. :FzfLua files
+    id = vim.api.nvim_create_autocmd('BufLeave', {
+        pattern = { '' },
         callback = function()
-            if startpage_buf ~= vim.api.nvim_get_current_buf() then
+            if startpage_buf == vim.api.nvim_get_current_buf() then
                 close_startpage()
             end
         end,
