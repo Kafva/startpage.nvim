@@ -134,12 +134,6 @@ local function open_under_cursor()
         return
     end
 
-    -- HACK: For some reason registering the `BufLeave` autocmd causes the buffer
-    -- we open to lack filetype information, workaround to make it load.
-    local id = vim.fn.bufadd(filepath)
-    -- Catch potential 'Found a swap file...' errors
-    _ = pcall(vim.fn.bufload, id)
-
     vim.cmd('edit ' .. filepath)
 end
 
@@ -196,17 +190,6 @@ local function init_mappings()
         desc = "Go to file under cursor"
     })
     -- stylua: ignore end
-end
-
--- Close the startpage buffer, keymaps and highlights are buffer local so
--- they do not need to be cleared here.
-local function close_startpage()
-    clear_autocmds()
-    vim.api.nvim_buf_delete(startpage_buf, {})
-    startpage_buf = nil
-    startpage_win = nil
-    startpage_width = nil
-    startpage_height = nil
 end
 
 ---@param oldfiles table
@@ -322,13 +305,29 @@ function M.setup(user_opts)
     table.insert(startpage_autocmd_ids, id)
 
     -- Close the startpage as soon as we leave it, this is needed
-    -- to automatically close the page with e.g. :FzfLua files
+    -- to automatically close the page when using
+    --  :e <filepath>
+    --  :FzfLua files
+    -- etc.
+    -- Keymaps and highlights are buffer local so they do not need to be
+    -- cleared here.
     id = vim.api.nvim_create_autocmd('BufLeave', {
         pattern = { '' },
         callback = function()
-            if startpage_buf == vim.api.nvim_get_current_buf() then
-                close_startpage()
+            if startpage_buf ~= vim.api.nvim_get_current_buf() then
+                return
             end
+
+            -- Loading the new buffer can be buggy if we do not use defer
+            -- here, the filetype of the new buffer may not load properly.
+            vim.defer_fn(function()
+                clear_autocmds()
+                vim.api.nvim_buf_delete(startpage_buf, {})
+                startpage_buf = nil
+                startpage_win = nil
+                startpage_width = nil
+                startpage_height = nil
+            end, 100)
         end,
     })
     table.insert(startpage_autocmd_ids, id)
@@ -341,6 +340,7 @@ function M.setup(user_opts)
                 or vim.fn.expand('%') ~= ''
                 or vim.o.ft == 'netrw'
             then
+                clear_autocmds()
                 return
             end
             startpage_win = vim.api.nvim_get_current_win()
