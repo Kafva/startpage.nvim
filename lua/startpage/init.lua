@@ -139,7 +139,8 @@ end
 
 local function clear_autocmds()
     for _, id in ipairs(startpage_autocmd_ids) do
-        vim.api.nvim_del_autocmd(id)
+        -- Ignore errors if buffer has already been deleted
+        _ = pcall(vim.api.nvim_del_autocmd, id)
     end
     startpage_autocmd_ids = {}
 end
@@ -322,7 +323,8 @@ function M.setup(user_opts)
             -- here, the filetype of the new buffer may not load properly.
             vim.defer_fn(function()
                 clear_autocmds()
-                vim.api.nvim_buf_delete(startpage_buf, {})
+                -- Ignore errors if buffer has already been closed
+                _ = pcall(vim.api.nvim_buf_delete, startpage_buf, {})
                 startpage_buf = nil
                 startpage_win = nil
                 startpage_width = nil
